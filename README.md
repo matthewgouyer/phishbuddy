@@ -1,62 +1,30 @@
-# initial setup:
+# PhishBuddy - URL Phishing Detector
 
-## 1. Clone the repo.
+### 1. Clone the repo
 
-## 2. Create a virtual environment in the root of the project.
+### 2. Create a virtual environment
 
-### In PyCharm:
+**Using PyCharm:**
+- Go to File > Settings > Project > Python Interpreter
+- Click the gear icon and select "Add"
+- Choose "Virtualenv" and select Python 3.x as base interpreter
+- Click "OK"
 
-Go to File > Settings > Project: <Project Name> > Python Interpreter.
-Add a new interpreter by clicking the gear icon and selecting "Add".
-   Click Generate new environment.
-   Choose "Virtualenv" and select the base interpreter (Python 3.x).
-   Click "OK" to create the virtual environment.
+**Using Terminal:**
+```bash
+python -m venv .venv
+```
 
-Or 
+### 3. Activate the virtual environment
 
-### In Terminal:
-
-Create a virtual environment in the root of the project.
-   python -m venv .venv
-
-Activate the virtual environment.
-   On Windows:
-      .venv\Scripts\activate
-   On macOS/Linux:
-      source .venv/bin/activate
-
-
-Now open a new terminal window and complete the following steps:
-
-## 3. Install the dependencies.
+### 4. Install dependencies
+```bash
 pip install -r requirements.txt
+```
 
-   
-## 4. Run the following command to start the server:
+### 5. Run the Flask development server
+```bash
+python app.py
+```
 
-uvicorn backend.main:app --reload
-
-fast api docs has backend commands for testing
-
-## 5. Run frontend/app.py to start the frontend server.
-
-Either from the terminal 
-
-python frontend/app.py
-
-or from PyCharm directly.
-
-Then open dev server in a browser of your choosing. Should be @ http://127.0.0.1:5000/
-
-
-extra note, not sure if necessary:
-.env version control note:
-make an .env file in the root of the project and add the following variables
-
-# .env
-
-ENV_NAME="Development"
-
-BASE_URL="given uvicorn address"
-
-DB_URL="sqlite:///data/urls.db"
+The application will be available at: **http://127.0.0.1:5000/**
