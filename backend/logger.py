@@ -21,10 +21,12 @@ console_formatter = logging.Formatter(
 console_handler.setFormatter(console_formatter)
 
 # file handler at the debug level
+from .config import LOGGING
+
 file_handler = logging.handlers.RotatingFileHandler(
     LOG_DIR / "phishbuddy.log",
-    maxBytes=5 * 1024 * 1024,  # 5MB
-    backupCount=5
+    maxBytes=LOGGING['max_bytes'],
+    backupCount=LOGGING['backup_count']
 )
 file_handler.setLevel(logging.DEBUG)
 file_formatter = logging.Formatter(

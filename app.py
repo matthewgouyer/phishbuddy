@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, jsonify
 from backend.phish_detector import PhishDetector
 from backend.logger import get_logger
+from backend.config import FLASK
 import os
 from dotenv import load_dotenv
 
@@ -42,7 +43,7 @@ def check_url():
 
 
 if __name__ == '__main__':
-    host = '127.0.0.1'
-    port = 5000
+    host = FLASK['host']
+    port = FLASK['port']
     logger.info(f"Starting PhishBuddy @ http://{host}:{port}")
-    app.run(host=host, port=port, debug=True)
+    app.run(host=host, port=port, debug=FLASK['debug'])

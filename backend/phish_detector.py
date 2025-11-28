@@ -2,19 +2,13 @@ import re
 from urllib.parse import urlparse
 import validators
 from .logger import get_logger
+from .config import SUSPICIOUS_KEYWORDS, RISK_THRESHOLDS, URL_ANALYSIS, VERDICT_THRESHOLDS
 
 logger = get_logger()
 
 
 class PhishDetector:
     """Detects potential phishing URLs using heuristics."""
-
-    # temp list of suspicious keywords
-    SUSPICIOUS_KEYWORDS = [
-        'login', 'signin', 'secure', 'account', 'update', 'verify',
-        'bank', 'confirm', 'password', 'ebay', 'paypal', 'appleid',
-        'billing', 'wp-admin', 'auth', 'checkout'
-    ]
 
     def __init__(self):
         pass
@@ -51,7 +45,7 @@ class PhishDetector:
         def find_suspicious_keywords(parsed):
             """Find suspicious keywords in URL."""
             url_text = (parsed.netloc + parsed.path + (parsed.query or "")).lower()
-            found = [k for k in self.SUSPICIOUS_KEYWORDS if k in url_text]
+            found = [k for k in SUSPICIOUS_KEYWORDS if k in url_text]
             return found
 
         if not url.startswith(("http://", "https://")):
@@ -70,62 +64,62 @@ class PhishDetector:
 
         # IP address check
         if has_ip_in_host(parsed):
-            score += 30
+            score += RISK_THRESHOLDS['ip_address']
             reasons.append("URL uses raw IP address instead of domain name")
 
         # Insecure scheme check
         if parsed.scheme != "https":
-            score += 20
+            score += RISK_THRESHOLDS['insecure_scheme']
             reasons.append("Not using HTTPS (insecure connection)")
 
         # @ symbol check
         if "@" in parsed.netloc or "@" in url:
-            score += 25
+            score += RISK_THRESHOLDS['at_symbol']
             reasons.append(
                 'Contains "@" symbol (often used for credential-based redirects)'
             )
 
         # URL length check
-        if len(url) > 75:
-            score += 10
+        if len(url) > URL_ANALYSIS['max_length']:
+            score += RISK_THRESHOLDS['long_url']
             reasons.append("Very long URL (may hide true destination)")
 
         # subdomain count check
         subdomains = count_subdomains(parsed)
         details["subdomain_count"] = subdomains
-        if subdomains >= 3:
-            score += 10
+        if subdomains >= URL_ANALYSIS['min_subdomains_suspicious']:
+            score += RISK_THRESHOLDS['excessive_subdomains']
             reasons.append(f"Excessive subdomains ({subdomains} levels)")
 
         # sus keywords check
         keywords = find_suspicious_keywords(parsed)
         details["suspicious_keywords"] = keywords
         if keywords:
-            score += min(40, 10 * len(keywords))
+            score += min(40, RISK_THRESHOLDS['suspicious_keywords'] * len(keywords))
             reasons.append(f'Contains suspicious keywords: {", ".join(keywords)}')
 
         # Percent encoding check
         if "%" in parsed.path or "%" in (parsed.query or ""):
-            score += 7
+            score += RISK_THRESHOLDS['percent_encoding']
             reasons.append(
                 "URL contains percent-encoded characters (may hide malicious intent)"
             )
 
         # multiple hyphens in domain
         domain = parsed.netloc.split(":")[0]
-        if domain.count("-") >= 2:
-            score += 5
+        if domain.count("-") >= URL_ANALYSIS['min_hyphens_suspicious']:
+            score += RISK_THRESHOLDS['multiple_hyphens']
             reasons.append("Multiple hyphens in domain (common in lookalike domains)")
 
         # Cap score at 100
         score = min(100, max(0, score))
 
-        # Determine verdict (might need to adjust threshold discrepancies before compare to DBS)
-        if score <= 30:
+        # Determine verdict based on score thresholds
+        if score <= VERDICT_THRESHOLDS['low']:
             verdict = "Low"
-        elif score <= 60:
+        elif score <= VERDICT_THRESHOLDS['medium']:
             verdict = "Medium"
-        elif score <= 85:
+        elif score <= VERDICT_THRESHOLDS['high']:
             verdict = "High"
         else:
             verdict = "Critical"
