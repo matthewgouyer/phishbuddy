@@ -1,6 +1,9 @@
 import re
 from urllib.parse import urlparse
 import validators
+from .logger import get_logger
+
+logger = get_logger()
 
 
 class PhishDetector:
@@ -61,6 +64,9 @@ class PhishDetector:
         score = 0
         reasons = []
         details = {}
+
+        # simple info use just to keep track of palletable log output in log file
+        logger.info(f"Starting phishing check for URL: {parsed.netloc}")
 
         # IP address check
         if has_ip_in_host(parsed):
@@ -123,6 +129,9 @@ class PhishDetector:
             verdict = "High"
         else:
             verdict = "Critical"
+
+        # simple info use just to keep track of palletable log output in log file
+        logger.info(f"Analysis complete: {parsed.netloc} - Verdict: {verdict} (score: {score})")
 
         # Store parsed URL details
         domain = parsed.netloc.split(":")[0]
