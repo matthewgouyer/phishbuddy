@@ -3,7 +3,7 @@
 RISK_THRESHOLDS = {
     'ip_address': 30,
     'insecure_scheme': 20,
-    'at_symbol': 25, # fyi is our cred redirect attempt check
+    'at_symbol': 35, # fyi is our cred redirect attempt check
     'long_url': 10,
     'excessive_subdomains': 10,
     'suspicious_keywords': 10,
