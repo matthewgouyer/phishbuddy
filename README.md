@@ -26,5 +26,31 @@ pip install -r requirements.txt
 ```bash
 python app.py
 ```
-
 The application will be available at: **http://127.0.0.1:5000/**
+
+### 6. Run PyTest
+
+**Run all tests:**
+```bash
+python -m pytest tests/test_phish_detector.py -v
+```
+
+**Run specific test class:**
+```bash
+python -m pytest tests/test_phish_detector.py::{TestClassName} -v
+```
+
+**Run with logging output:**
+```bash
+python -m pytest tests/test_phish_detector.py -v -s
+```
+
+**Save test results to text file (Windows PowerShell):**
+```powershell
+python -m pytest tests/test_phish_detector.py -v | Out-File -Encoding UTF8 tests/results/test_results.txt
+```
+
+**Save test results to text file (Mac/Linux):**
+```bash
+python -m pytest tests/test_phish_detector.py -v > tests/results/test_results.txt
+```

@@ -15,10 +15,59 @@ class PhishDetector:
 
 # steps we should be checking for url
 # Normalize/Validate URL, Check for IP/HTTP use, @ symbol redirects, url length, subdomains,
-# check keywords, hypens, determine and compile score and results.
+# check keywords, hyphens, determine and compile score and results.
+
+    def check_input(self, url):
+        """
+        Validate and normalize URL input.
+
+        Args:
+            url: URL string to validate
+
+        Returns:
+            tuple: (is_valid: bool, normalized_url: str or error_msg: str)
+        """
+        # type/empty check
+        if not isinstance(url, str):
+            return False, "URL must be a string"
+
+        url = url.strip()
+        if not url:
+            return False, "URL cannot be empty"
+
+        # check and or add http/https scheme
+        if "://" in url:
+            scheme = url.split("://")[0].lower()
+            if scheme not in ("http", "https"):
+                return False, f"Invalid URL scheme: {scheme}. Only http and https are supported."
+        else:
+            url = "https://" + url
+
+        # standard validation
+        if validators.url(url):
+            return True, url
+
+        # temp fallback: check for @ symbol based redirection
+        if "@" in url:
+            scheme_end = url.find("://") + 3
+            at_pos = url.find("@")
+            if scheme_end < at_pos:
+                base_url = url[:scheme_end] + url[at_pos + 1 :]
+                if validators.url(base_url):
+                    return True, url
+
+        # basic structure for worse case
+        if "://" in url and "." in url:
+            return True, url
+
+        return False, "Invalid URL format"
+
     def check_url(self, url):
         """
         Analyze a URL and return risk score, verdict, and reasons.
+
+        Args:
+            url: URL string to analyze
 
         Returns:
             dict: {
@@ -27,6 +76,8 @@ class PhishDetector:
                 'reasons': [list of strings],
                 'details': {metadata}
             }
+            or
+            dict: {'error': 'error message'} on invalid input
         """
 
         def has_ip_in_host(parsed):
@@ -48,12 +99,12 @@ class PhishDetector:
             found = [k for k in SUSPICIOUS_KEYWORDS if k in url_text]
             return found
 
-        if not url.startswith(("http://", "https://")):
-            url = "https://" + url
+        # check input call
+        is_valid, result = self.check_input(url)
+        if not is_valid:
+            return {"error": result}
 
-        if not validators.url(url):
-            return {"error": "Invalid URL format"}
-
+        url = result
         parsed = urlparse(url)
         score = 0
         reasons = []
@@ -73,6 +124,9 @@ class PhishDetector:
             reasons.append("Not using HTTPS (insecure connection)")
 
         # @ symbol check
+        at_in_netloc = "@" in parsed.netloc
+        at_in_url = "@" in url
+        logger.info(f"@ symbol check - in netloc: {at_in_netloc}, in url: {at_in_url}")
         if "@" in parsed.netloc or "@" in url:
             score += RISK_THRESHOLDS['at_symbol']
             reasons.append(
@@ -124,7 +178,7 @@ class PhishDetector:
         else:
             verdict = "Critical"
 
-        # simple info use just to keep track of palletable log output in log file
+        # simple info use just to keep track of palatable log output in log file
         logger.info(f"Analysis complete: {parsed.netloc} - Verdict: {verdict} (score: {score})")
 
         # Store parsed URL details
