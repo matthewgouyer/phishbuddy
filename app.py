@@ -1,8 +1,9 @@
 from flask import Flask, render_template, request, jsonify
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from backend.phish_detector import PhishDetector
 from backend.logger import get_logger
-from backend.config import FLASK
-import os
+from backend.config import FLASK, RATE_LIMITING
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -13,6 +14,13 @@ logger = get_logger()
 app = Flask(__name__, template_folder='frontend/templates', static_folder='frontend/static')
 detector = PhishDetector()
 
+# init rate limiter
+limiter = Limiter(
+    app=app,
+    key_func=get_remote_address,
+    default_limits=[RATE_LIMITING['limit']] if RATE_LIMITING['enabled'] else [],
+)
+
 
 @app.route('/')
 def index():
@@ -21,6 +29,7 @@ def index():
 
 
 @app.route('/api/check', methods=['POST'])
+@limiter.limit(RATE_LIMITING['limit']) if RATE_LIMITING['enabled'] else lambda f: f
 def check_url():
     # api endpoint to check a url
     data = request.get_json()

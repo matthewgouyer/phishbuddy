@@ -43,3 +43,9 @@ LOGGING = {
     'backup_count': 5,
 }
 
+# rate limiting settings
+RATE_LIMITING = {
+    'enabled': True,
+    'limit': '10 per minute',  # 10 requests per minute per IP
+    'storage_url': 'memory://',  # Using in-memory storage (can switch to redis://)
+}
