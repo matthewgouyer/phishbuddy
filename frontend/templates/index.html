@@ -1,10 +1,45 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
     <title>PhishBuddy</title>
 </head>
 <body>
+    <h1>PhishBuddy</h1>
 
+    <input type="text" id="urlInput" placeholder="Enter URL">
+    <button onclick="checkURL()">Check</button>
+
+    <div id="results"></div>
+
+    <script>
+        async function checkURL() {
+            const url = document.getElementById('urlInput').value;
+            if (!url) return;
+
+            try {
+                const res = await fetch('/api/check', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({url: url})
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    document.getElementById('results').innerHTML = `
+                        <h2>Verdict: ${data.verdict}</h2>
+                        <p>Score: ${data.risk_score}/100</p>
+                        <h3>Reasons:</h3>
+                        <ul>${data.reasons.map(r => `<li>${r}</li>`).join('')}</ul>
+                    `;
+                } else {
+                    document.getElementById('results').innerHTML = `<p>Error: ${data.error}</p>`;
+                }
+            } catch (e) {
+                document.getElementById('results').innerHTML = `<p>Error: ${e.message}</p>`;
+            }
+        }
+    </script>
 </body>
 </html>
+
