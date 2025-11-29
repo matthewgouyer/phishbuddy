@@ -2,7 +2,8 @@ import re
 from urllib.parse import urlparse
 import validators
 from .logger import get_logger
-from .config import SUSPICIOUS_KEYWORDS, RISK_THRESHOLDS, URL_ANALYSIS, VERDICT_THRESHOLDS
+from .config import SUSPICIOUS_KEYWORDS, RISK_THRESHOLDS, URL_ANALYSIS, VERDICT_THRESHOLDS, EXTERNAL_DBS
+from .external_dbs import VirusTotalChecker
 
 logger = get_logger()
 
@@ -11,7 +12,7 @@ class PhishDetector:
     """Detects potential phishing URLs using heuristics."""
 
     def __init__(self):
-        pass
+        self.vt_checker = VirusTotalChecker() if EXTERNAL_DBS.get('virustotal_enabled') else None
 
 # steps we should be checking for url
 # Normalize/Validate URL, Check for IP/HTTP use, @ symbol redirects, url length, subdomains,
@@ -181,6 +182,32 @@ class PhishDetector:
         # simple info use just to keep track of palatable log output in log file
         logger.info(f"Analysis complete: {parsed.netloc} - Verdict: {verdict} (score: {score})")
 
+        # Check external phishing databases
+        ext_db_details = {"virustotal": None}
+        if self.vt_checker and self.vt_checker.enabled:
+            vt_result = self.vt_checker.check(url)
+            ext_db_details["virustotal"] = vt_result
+
+            if vt_result.get('detected'):
+                # External DB detected phishing - boost score significantly
+                vt_score = vt_result.get('score', 0)
+                score += min(40, vt_score // 2)  # Add half of VT score (max 40 points)
+                reasons.insert(0, f"⚠️  Flagged by VirusTotal: {vt_result.get('details', '')}")
+                logger.warning(f"VirusTotal detected phishing for {url}: {vt_result.get('details')}")
+
+        # Cap score at 100 after external DB boost
+        score = min(100, max(0, score))
+
+        # Recalculate verdict based on updated score
+        if score <= VERDICT_THRESHOLDS['low']:
+            verdict = "Low"
+        elif score <= VERDICT_THRESHOLDS['medium']:
+            verdict = "Medium"
+        elif score <= VERDICT_THRESHOLDS['high']:
+            verdict = "High"
+        else:
+            verdict = "Critical"
+
         # Store parsed URL details
         domain = parsed.netloc.split(":")[0]
         details.update(
@@ -189,6 +216,7 @@ class PhishDetector:
                 "domain": domain,
                 "path": parsed.path or "/",
                 "query": parsed.query or "none",
+                "external_dbs": ext_db_details,
             }
         )
 

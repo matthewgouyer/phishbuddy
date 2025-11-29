@@ -1,4 +1,9 @@
 # config file
+import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 RISK_THRESHOLDS = {
     'ip_address': 30,
@@ -48,4 +53,12 @@ RATE_LIMITING = {
     'enabled': True,
     'limit': '10 per minute',  # 10 requests per minute per IP
     'storage_url': 'memory://',  # Using in-memory storage (can switch to redis://)
+}
+
+# external phishing databases
+EXTERNAL_DBS = {
+    'virustotal_api_key': os.getenv('VIRUSTOTAL_API_KEY', None),
+    'virustotal_enabled': True,  # Enabled - API key is in .env
+    'cache_results': True,
+    'cache_ttl': 3600,  # Cache for 1 hour
 }
