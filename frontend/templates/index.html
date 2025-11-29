@@ -23,6 +23,34 @@
 
         #results {
             margin-top: 30px;
+            padding: 15px;
+            border-radius: 5px;
+            display: none;
+        }
+
+        #results.low {
+            background: #4caf50;
+            color: white;
+        }
+
+        #results.medium {
+            background: #ff9800;
+            color: white;
+        }
+
+        #results.high {
+            background: #ff5722;
+            color: white;
+        }
+
+        #results.critical {
+            background: #f44336;
+            color: white;
+        }
+
+        #results.error {
+            background: #9c27b0;
+            color: white;
         }
     </style>
 </head>
@@ -47,19 +75,28 @@
                 });
 
                 const data = await res.json();
+                const resultsDiv = document.getElementById('results');
+                resultsDiv.className = '';
 
                 if (res.ok) {
-                    document.getElementById('results').innerHTML = `
+                    const verdict = data.verdict.toLowerCase();
+                    resultsDiv.classList.add(verdict);
+                    resultsDiv.innerHTML = `
                         <h2>Verdict: ${data.verdict}</h2>
                         <p>Score: ${data.risk_score}/100</p>
                         <h3>Reasons:</h3>
                         <ul>${data.reasons.map(r => `<li>${r}</li>`).join('')}</ul>
                     `;
                 } else {
-                    document.getElementById('results').innerHTML = `<p>Error: ${data.error}</p>`;
+                    resultsDiv.classList.add('error');
+                    resultsDiv.innerHTML = `<p>Error: ${data.error}</p>`;
                 }
+                resultsDiv.style.display = 'block';
             } catch (e) {
-                document.getElementById('results').innerHTML = `<p>Error: ${e.message}</p>`;
+                const resultsDiv = document.getElementById('results');
+                resultsDiv.classList.add('error');
+                resultsDiv.innerHTML = `<p>Error: ${e.message}</p>`;
+                resultsDiv.style.display = 'block';
             }
         }
     </script>
