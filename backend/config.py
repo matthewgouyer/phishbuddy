@@ -14,12 +14,19 @@ RISK_THRESHOLDS = {
     'suspicious_keywords': 10,
     'percent_encoding': 7,
     'multiple_hyphens': 5,
+    'new_domain': 20,
+    'very_new_domain': 35,
 }
 
 URL_ANALYSIS = {
     'max_length': 75,
     'min_subdomains_suspicious': 3,
     'min_hyphens_suspicious': 2,
+}
+
+DOMAIN_AGE = {
+    'max_days_suspicious': 30,  # 1 month
+    'max_days_very_suspicious': 7,  # 1 week
 }
 
 VERDICT_THRESHOLDS = {
@@ -52,7 +59,8 @@ LOGGING = {
 RATE_LIMITING = {
     'enabled': True,
     'limit': '10 per minute',  # 10 requests per minute per IP
-    'storage_url': 'memory://',  # Using in-memory storage (can switch to redis://)
+    'storage_url': 'memory://',  # Using in-memory storage for development
+                                  # For production, switch to redis:// or other persistent storage
 }
 
 # external phishing databases

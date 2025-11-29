@@ -1,8 +1,10 @@
 import re
 from urllib.parse import urlparse
+from datetime import datetime
+import whois
 import validators
 from .logger import get_logger
-from .config import SUSPICIOUS_KEYWORDS, RISK_THRESHOLDS, URL_ANALYSIS, VERDICT_THRESHOLDS, EXTERNAL_DBS
+from .config import SUSPICIOUS_KEYWORDS, RISK_THRESHOLDS, URL_ANALYSIS, VERDICT_THRESHOLDS, EXTERNAL_DBS, DOMAIN_AGE
 from .external_dbs import VirusTotalChecker
 
 logger = get_logger()
@@ -13,6 +15,7 @@ class PhishDetector:
 
     def __init__(self):
         self.vt_checker = VirusTotalChecker() if EXTERNAL_DBS.get('virustotal_enabled') else None
+        self.domain_age_checker = DomainAgeChecker()
 
 # steps we should be checking for url
 # Normalize/Validate URL, Check for IP/HTTP use, @ symbol redirects, url length, subdomains,
@@ -166,6 +169,22 @@ class PhishDetector:
             score += RISK_THRESHOLDS['multiple_hyphens']
             reasons.append("Multiple hyphens in domain (common in lookalike domains)")
 
+        # Domain age check
+        domain_age_info = self.domain_age_checker.get_domain_age(url)
+        details["domain_age"] = domain_age_info
+
+        if domain_age_info.get('age_days') is not None:
+            age_days = domain_age_info['age_days']
+            is_suspicious, severity = self.domain_age_checker.is_suspicious_age(age_days)
+
+            if is_suspicious:
+                if severity == 'very_new':
+                    score += RISK_THRESHOLDS['very_new_domain']
+                    reasons.append(f"Domain registered very recently ({age_days} days ago)")
+                elif severity == 'new':
+                    score += RISK_THRESHOLDS['new_domain']
+                    reasons.append(f"Domain registered recently ({age_days} days ago)")
+
         # Cap score at 100
         score = min(100, max(0, score))
 
@@ -228,3 +247,79 @@ class PhishDetector:
             else ["No major phishing indicators detected"],
             "details": details,
         }
+
+class DomainAgeChecker:
+    """Check domain age and registration details."""
+
+    @staticmethod
+    def get_domain_age(url):
+        """
+        Calculate domain age in days.
+
+        Args:
+            url: Full URL to check
+
+        Returns:
+            dict: {
+                'age_days': int or None,
+                'creation_date': str or None,
+                'error': str or None
+            }
+        """
+        try:
+            parsed = urlparse(url)
+            domain = parsed.netloc.split(":")[0]
+
+            # query WHOIS data
+            whois_data = whois.whois(domain)
+
+            # isolate date
+            creation_date = whois_data.creation_date
+            if isinstance(creation_date, list):
+                creation_date = creation_date[0]
+
+            if not creation_date:
+                return {'age_days': None, 'creation_date': None, 'error': 'No creation date found'}
+
+            # calc age
+            now = datetime.now()
+            if creation_date.tzinfo is not None:
+                now = datetime.now(creation_date.tzinfo)
+
+            age_days = (now - creation_date).days
+
+            return {
+                'age_days': age_days,
+                'creation_date': creation_date.isoformat(),
+                'error': None
+            }
+
+        except whois.parser.PywhoisError as e:
+            logger.warning(f"WHOIS lookup failed for {url}: {e}")
+            return {'age_days': None, 'creation_date': None, 'error': 'WHOIS lookup failed'}
+        except Exception as e:
+            logger.error(f"Domain age check error for {url}: {e}")
+            return {'age_days': None, 'creation_date': None, 'error': str(e)}
+
+    @staticmethod
+    def is_suspicious_age(age_days):
+        """
+        Check if domain age is suspiciously young.
+
+        Args:
+            age_days: Domain age in days
+
+        Returns:
+            tuple: (is_suspicious: bool, severity: str)
+                severity: 'very_new' or 'new' or None
+        """
+        if age_days is None:
+            return False, None
+
+        if age_days <= DOMAIN_AGE['max_days_very_suspicious']:
+            return True, 'very_new'
+        elif age_days <= DOMAIN_AGE['max_days_suspicious']:
+            return True, 'new'
+
+        return False, None
+
